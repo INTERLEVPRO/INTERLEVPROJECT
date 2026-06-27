@@ -1,0 +1,22 @@
+# INTERLEV System Startup Commands
+
+Run these commands from the 'c:\Users\PC\CODEGOOGLE\INTERLEV-AI-Agent' directory.
+
+1. START BACKEND (FastAPI):
+& "C:\Users\PC\CU-WITH-CODE\.runtime\python312\python.exe" -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+2. START WORKER (Celery):
+& "C:\Users\PC\CU-WITH-CODE\.runtime\python312\python.exe" -m celery -A backend.app.tasks.celery_app worker --loglevel=info --pool=solo -Q agent_queue
+
+3. START FRONTEND (Streamlit):
+& "C:\Users\PC\CU-WITH-CODE\.runtime\python312\python.exe" -m streamlit run frontend/app.py --server.port 8501
+
+4. MCP SERVER (for MCP clients, stdio):
+& "C:\Users\PC\CU-WITH-CODE\.runtime\python312\python.exe" -m backend.mcp_server
+
+5. MCP HTTP BRIDGE (available when backend is running):
+http://localhost:8000/api/mcp/health
+http://localhost:8000/api/mcp/tools
+http://localhost:8000/api/mcp/resources
+
+Note: These commands use the absolute path to your specific Python 3.12 environment.

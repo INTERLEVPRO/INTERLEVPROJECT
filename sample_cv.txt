@@ -1,0 +1,33 @@
+JOHN DOE
+Senior Python Backend Engineer
+Email: john.doe@example.com
+Phone: +49 151 12345678
+Location: Berlin, Germany (Remote)
+
+SUMMARY:
+Highly experienced Backend Engineer with 8+ years of experience in Python, FastAPI, and Distributed Systems. 
+Expert in building scalable AI agentic workflows and high-performance APIs.
+
+SKILLS:
+- Languages: Python, Go, TypeScript
+- Frameworks: FastAPI, Django, Flask, Celery
+- Databases: PostgreSQL, Redis, MongoDB, pgvector
+- Tools: Docker, Kubernetes, AWS, Terraform
+- AI: OpenAI API, LangChain, LlamaIndex
+
+EXPERIENCE:
+Senior Backend Developer | TechCorp GmbH | 2020 - Present
+- Led the migration of monolith to microservices using FastAPI and Celery.
+- Optimized database queries resulting in 40% faster response times.
+- Integrated AI agents for automated customer support.
+
+Python Developer | Startup XYZ | 2017 - 2020
+- Developed REST APIs for a high-traffic e-commerce platform.
+- Managed CI/CD pipelines using GitLab and Docker.
+
+EDUCATION:
+Master of Science in Computer Science | Technical University of Munich | 2017
+
+CERTIFICATIONS:
+- AWS Certified Solutions Architect
+- Professional Scrum Master I
