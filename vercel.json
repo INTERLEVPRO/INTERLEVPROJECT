@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "backend.main:app": {
+      "excludeFiles": "{frontend/**,frontend-streamlit/**,cv_templates/**,*.md,*.txt,*.ps1,docker-compose.yml,render.yaml,backend/Dockerfile,frontend/Dockerfile,frontend/Dockerfile.next}"
+    }
+  }
+}
