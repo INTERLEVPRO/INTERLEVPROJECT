@@ -1,2 +1,32 @@
+[project]
+name = "interlev-ai-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "python-dotenv",
+    "openai",
+    "langchain",
+    "pymupdf",
+    "docx2txt",
+    "python-docx",
+    "docx2pdf",
+    "streamlit",
+    "requests",
+    "beautifulsoup4",
+    "python-multipart",
+    "celery",
+    "redis",
+    "pydantic-settings",
+    "sqlalchemy",
+    "psycopg2-binary",
+    "pdfplumber",
+    "alembic",
+    "pgvector",
+    "google-generativeai",
+]
+
 [tool.vercel]
 entrypoint = "backend.main:app"
