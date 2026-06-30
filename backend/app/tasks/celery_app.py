@@ -1,14 +1,22 @@
 import os
+import tempfile
+from pathlib import Path
+
 from celery import Celery
 
 # Redis URL: use REDIS_URL if set, otherwise fallback to filesystem for local testing
 redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     broker_url = "filesystem://"
-    result_backend = "file://./celery_results"
-    
-    os.makedirs("./celery_broker", exist_ok=True)
-    os.makedirs("./celery_results", exist_ok=True)
+    runtime_dir = Path(tempfile.gettempdir()) / "interlev-agent" if os.getenv("VERCEL") else Path(".")
+    broker_dir = runtime_dir / "celery_broker"
+    results_dir = runtime_dir / "celery_results"
+    processed_dir = broker_dir / "processed"
+    result_backend = f"file://{results_dir}"
+
+    broker_dir.mkdir(parents=True, exist_ok=True)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    processed_dir.mkdir(parents=True, exist_ok=True)
     
     celery_app = Celery(
         "interlev_agent",
@@ -23,8 +31,9 @@ if not redis_url:
     )
     celery_app.conf.update(
         broker_transport_options={
-            'data_folder_in': './celery_broker',
-            'data_folder_out': './celery_broker',
+            'data_folder_in': str(broker_dir),
+            'data_folder_out': str(broker_dir),
+            'data_folder_processed': str(processed_dir),
         }
     )
 else:

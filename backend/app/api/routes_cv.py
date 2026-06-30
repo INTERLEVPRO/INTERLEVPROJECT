@@ -1,5 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict
+import os
+import tempfile
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Query, Body
@@ -21,8 +23,12 @@ import shutil
 
 router = APIRouter()
 
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR = (
+    Path(tempfile.gettempdir()) / "interlev-agent" / "uploads"
+    if os.getenv("VERCEL")
+    else Path("uploads")
+)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/upload")
 async def upload_cv(file: UploadFile = File(...), db: Session = Depends(get_db)):

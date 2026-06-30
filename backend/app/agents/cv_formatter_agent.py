@@ -1,7 +1,9 @@
 import os
 import re
+import tempfile
 import textwrap
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from docx import Document
@@ -12,6 +14,10 @@ from backend.app.services.app_settings import load_settings
 
 class CVFormatterAgent:
     def __init__(self, output_dir: str = "formatted_cvs"):
+        if os.getenv("VERCEL") and output_dir == "formatted_cvs":
+            output_dir = str(
+                Path(tempfile.gettempdir()) / "interlev-agent" / "formatted_cvs"
+            )
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
 

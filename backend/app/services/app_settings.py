@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -7,7 +8,12 @@ from pydantic import BaseModel, Field
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-SETTINGS_PATH = Path(os.getenv("INTERLEV_SETTINGS_PATH") or PROJECT_ROOT / "app_settings.json")
+DEFAULT_SETTINGS_PATH = (
+    Path(tempfile.gettempdir()) / "interlev-agent" / "app_settings.json"
+    if os.getenv("VERCEL")
+    else PROJECT_ROOT / "app_settings.json"
+)
+SETTINGS_PATH = Path(os.getenv("INTERLEV_SETTINGS_PATH") or DEFAULT_SETTINGS_PATH)
 if not SETTINGS_PATH.is_absolute():
     SETTINGS_PATH = PROJECT_ROOT / SETTINGS_PATH
 

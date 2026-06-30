@@ -1,5 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict
+import os
+import tempfile
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -14,8 +16,12 @@ from backend.app.services.app_settings import (
 
 
 router = APIRouter()
-CV_TEMPLATE_DIR = Path("cv_templates")
-CV_TEMPLATE_DIR.mkdir(exist_ok=True)
+CV_TEMPLATE_DIR = (
+    Path(tempfile.gettempdir()) / "interlev-agent" / "cv_templates"
+    if os.getenv("VERCEL")
+    else Path("cv_templates")
+)
+CV_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
 CV_TEMPLATE_MEDIA_TYPES = {
     ".pdf": "application/pdf",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
