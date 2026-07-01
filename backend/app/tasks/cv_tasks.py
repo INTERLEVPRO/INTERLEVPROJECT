@@ -7,6 +7,7 @@ from backend.app.models.cv import CV
 from backend.app.agents.logging_agent import LoggingAgent
 from backend.app.agents.notification_agent import NotificationAgent
 from backend.app.services.app_settings import load_settings
+from backend.app.tasks.celery_app import use_sync_tasks
 
 FALLBACK_KEYWORDS = ["Python", "FastAPI", "Backend"]
 
@@ -89,7 +90,6 @@ def run_full_recruitment_workflow(
     """
     from backend.app.tasks.job_tasks import keyword_search_workflow_task
     from backend.app.tasks.formatting_tasks import format_cv_task
-    from celery import chain
     
     # We chain the tasks together
     # Note: In a real scenario, we would pass IDs between tasks
@@ -109,8 +109,11 @@ def run_full_recruitment_workflow(
         candidate_id = result["candidate_id"]
         
         # 2. Trigger Formatting (CVWriterAgent)
-        format_cv_task.apply_async(args=[candidate_id], queue="agent_queue")
-        
+        if use_sync_tasks():
+            format_result = format_cv_task(candidate_id)
+        else:
+            format_result = format_cv_task.apply_async(args=[candidate_id], queue="agent_queue")
+
         # 3. Trigger Job Search (JobSearchAgent)
         search_keywords = keywords or []
         if isinstance(search_keywords, str):
@@ -127,14 +130,31 @@ def run_full_recruitment_workflow(
         if not search_keywords:
             search_keywords = load_settings().default_keywords or FALLBACK_KEYWORDS
 
-        keyword_search_workflow_task.apply_async(
-            args=[search_keywords, candidate_id, None, source_url, search_mode],
-            queue="agent_queue",
-        )
+        if use_sync_tasks():
+            search_result = keyword_search_workflow_task(
+                search_keywords,
+                candidate_id,
+                None,
+                source_url,
+                search_mode,
+            )
+        else:
+            search_result = keyword_search_workflow_task.apply_async(
+                args=[search_keywords, candidate_id, None, source_url, search_mode],
+                queue="agent_queue",
+            )
         
         # 4. Final Match (MatchingAgent) is usually triggered inside the keyword_search_workflow_task
         # but we could also trigger a candidate-specific match search here if needed.
         
+        if use_sync_tasks():
+            return {
+                "status": "success",
+                "candidate_id": candidate_id,
+                "format_result": format_result,
+                "search_result": search_result,
+            }
+
         return {"status": "workflow_started", "candidate_id": candidate_id}
     
     return result

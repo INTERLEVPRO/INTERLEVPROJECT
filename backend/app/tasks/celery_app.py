@@ -4,6 +4,17 @@ from pathlib import Path
 
 from celery import Celery
 
+
+def use_sync_tasks() -> bool:
+    """Run tasks inline for serverless/demo deployments that cannot run workers."""
+    explicit = os.getenv("INTERLEV_SYNC_TASKS", "").strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
+    return bool(os.getenv("VERCEL"))
+
+
 # Redis URL: use REDIS_URL if set, otherwise fallback to filesystem for local testing
 redis_url = os.getenv("REDIS_URL")
 if not redis_url:

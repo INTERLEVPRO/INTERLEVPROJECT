@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, Dict
 import os
 import tempfile
+from uuid import uuid4
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, Query, Body
@@ -16,7 +17,7 @@ from backend.app.models.candidate import Candidate
 from backend.app.models.cv import CV
 from backend.app.models.job import Job
 from backend.app.services.app_settings import load_settings
-from backend.app.tasks.celery_app import celery_app
+from backend.app.tasks.celery_app import celery_app, use_sync_tasks
 from backend.app.tasks.cv_tasks import parse_cv_task
 from backend.app.tasks.formatting_tasks import format_cv_task
 import shutil
@@ -29,6 +30,7 @@ UPLOAD_DIR = (
     else Path("uploads")
 )
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+SYNC_TASK_RESULTS: Dict[str, Dict[str, Any]] = {}
 
 @router.post("/upload")
 async def upload_cv(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -46,10 +48,13 @@ async def upload_cv(file: UploadFile = File(...), db: Session = Depends(get_db))
         {"file_path": file_path},
     )
     
-    # Trigger Celery task
-    task = parse_cv_task.delay(file_path)
+    if use_sync_tasks():
+        task_id = _run_sync_task(parse_cv_task, file_path)
+    else:
+        task = parse_cv_task.delay(file_path)
+        task_id = task.id
     
-    return {"message": "CV uploaded and parsing started", "task_id": task.id, "file_path": file_path}
+    return {"message": "CV uploaded and parsing started", "task_id": task_id, "file_path": file_path}
 
 @router.get("/")
 def get_cvs(db: Session = Depends(get_db)):
@@ -59,6 +64,9 @@ def get_cvs(db: Session = Depends(get_db)):
 @router.get("/status/{task_id}")
 def get_task_status(task_id: str) -> Dict[str, Any]:
     """Return Celery task state and result payload when available."""
+    if task_id in SYNC_TASK_RESULTS:
+        return SYNC_TASK_RESULTS[task_id]
+
     task = AsyncResult(task_id, app=celery_app)
     response: Dict[str, Any] = {
         "task_id": task_id,
@@ -106,9 +114,19 @@ async def run_full_campaign(
         "campaign",
         {"file_path": file_path, "keywords": keyword_list, "source_url": clean_source_url},
     )
-    task = run_full_recruitment_workflow.delay(file_path, keyword_list, clean_source_url, clean_search_mode)
+    if use_sync_tasks():
+        task_id = _run_sync_task(
+            run_full_recruitment_workflow,
+            file_path,
+            keyword_list,
+            clean_source_url,
+            clean_search_mode,
+        )
+    else:
+        task = run_full_recruitment_workflow.delay(file_path, keyword_list, clean_source_url, clean_search_mode)
+        task_id = task.id
     
-    return {"message": "Full autonomous campaign started", "task_id": task.id, "file_path": file_path}
+    return {"message": "Full autonomous campaign started", "task_id": task_id, "file_path": file_path}
 
 @router.post("/run-legacy-orchestrator")
 async def run_legacy_orchestrator(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -129,8 +147,12 @@ async def run_legacy_orchestrator(file: UploadFile = File(...), db: Session = De
 @router.post("/{candidate_id}/format")
 def format_candidate_cv(candidate_id: int):
     """Start a background task to regenerate the formatted CV for a candidate."""
-    task = format_cv_task.delay(candidate_id)
-    return {"message": "CV formatting started", "task_id": task.id, "candidate_id": candidate_id}
+    if use_sync_tasks():
+        task_id = _run_sync_task(format_cv_task, candidate_id)
+    else:
+        task = format_cv_task.delay(candidate_id)
+        task_id = task.id
+    return {"message": "CV formatting started", "task_id": task_id, "candidate_id": candidate_id}
 
 
 @router.get("/candidate/{candidate_id}/job/{job_id}/preview")
@@ -251,3 +273,26 @@ def _validate_upload(filename: str) -> None:
             status_code=400,
             detail=f"Unsupported CV format. Accepted formats: {', '.join(sorted(accepted))}",
         )
+
+
+def _run_sync_task(task_func, *args) -> str:
+    task_id = f"sync-{uuid4()}"
+    try:
+        result = task_func(*args)
+        success = not (isinstance(result, dict) and result.get("status") == "error")
+        SYNC_TASK_RESULTS[task_id] = {
+            "task_id": task_id,
+            "status": "SUCCESS" if success else "FAILURE",
+            "ready": True,
+            "successful": success,
+            "result": jsonable_encoder(result),
+        }
+    except Exception as exc:
+        SYNC_TASK_RESULTS[task_id] = {
+            "task_id": task_id,
+            "status": "FAILURE",
+            "ready": True,
+            "successful": False,
+            "result": {"status": "error", "message": str(exc)},
+        }
+    return task_id
