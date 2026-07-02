@@ -2145,6 +2145,7 @@ elif menu == "Run Campaign":
             )
             start_disabled = uploaded_file is None
             if st.button("Start Campaign", disabled=start_disabled, width="stretch"):
+                campaign_search_mode = "fast_pass" if ai_config.get("active_provider") == "mock" else "real_search"
                 if uploaded_file and uploaded_file.name.lower().endswith((".txt", ".md", ".markdown")):
                     st.session_state["uploaded_text_preview"] = uploaded_file.getvalue().decode(
                         "utf-8",
@@ -2158,7 +2159,7 @@ elif menu == "Run Campaign":
                     {
                         "keywords": "",
                         "source_url": "",
-                        "search_mode": "real_search",
+                        "search_mode": campaign_search_mode,
                     },
                 )
                 if ok:

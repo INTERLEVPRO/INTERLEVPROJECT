@@ -1,7 +1,10 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api import routes_cv, routes_candidates, routes_jobs, routes_matches, routes_applications, routes_review, routes_logs, routes_settings, routes_notifications, routes_mcp
 from backend.app.database import engine, Base
+from backend.app.tasks.celery_app import use_sync_tasks
 
 # Create tables for MVP (in production use Alembic)
 Base.metadata.create_all(bind=engine)
@@ -43,4 +46,13 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "interlev-agent-api", "version": app.version}
+    return {
+        "status": "ok",
+        "service": "interlev-agent-api",
+        "version": app.version,
+        "sync_tasks": use_sync_tasks(),
+        "deployment": {
+            "vercel": bool(os.getenv("VERCEL")),
+            "commit": os.getenv("VERCEL_GIT_COMMIT_SHA", ""),
+        },
+    }
